@@ -1,0 +1,71 @@
+<!-- index.html -->
+{% extends "base.html" %}
+
+{% block title %}Financial Growth Calculator{% endblock %}
+
+{% block content %}
+<h1 class="text-4xl font-bold mb-8 text-center">Financial Growth Calculator</h1>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <div>
+        <form method="post" class="bg-gray-800 shadow-md rounded-lg p-6">
+            <div class="mb-6">
+                <label for="rate" class="block text-gray-400 font-bold mb-2">Annual Interest Rate (%)</label>
+                <input type="number" step="0.01" class="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500" id="rate" name="rate" placeholder="e.g., 3.5" value="{{ rate }}" required>
+            </div>
+            <div class="mb-6">
+                <label for="initial_amount" class="block text-gray-400 font-bold mb-2">Initial Savings ($)</label>
+                <input type="number" step="0.01" class="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500" id="initial_amount" name="initial_amount" placeholder="e.g., 10000" value="{{ initial_amount }}" required>
+            </div>
+            <div class="mb-6">
+                <label for="monthly_contribution" class="block text-gray-400 font-bold mb-2">Monthly Contribution ($)</label>
+                <input type="number" step="0.01" class="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500" id="monthly_contribution" name="monthly_contribution" placeholder="e.g., 200" value="{{ monthly_contribution }}" required>
+            </div>
+            <div class="mb-8">
+                <label class="inline-flex items-center">
+                    <input type="checkbox" class="form-checkbox text-blue-500 bg-gray-700 border-gray-600 rounded" id="compound" name="compound" {% if compound %}checked{% endif %}>
+                    <span class="ml-2 text-gray-400">Compound Interest</span>
+                </label>
+            </div>
+            <div class="flex justify-center space-x-4">
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg">Calculate Growth</button>
+                <a href="{{ url_for('index') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-lg">Clear</a>
+            </div>
+        </form>
+    </div>
+    <div>
+        {% if plot_data %}
+        <div class="bg-gray-800 shadow-md rounded-lg p-6">
+            <h2 class="text-2xl font-bold mb-6 text-center">Account Growth Plot</h2>
+            <div class="text-center">
+                <img src="data:image/png;base64,{{ plot_data }}" alt="Account Growth Plot" class="inline-block">
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% if data %}
+<div class="mt-12">
+    <h2 class="text-3xl font-bold mb-6">Growth Projections</h2>
+    <table class="w-full text-left table-collapse">
+        <thead>
+            <tr>
+                <th class="px-4 py-2 bg-gray-700 text-gray-400 font-bold uppercase">Years</th>
+                <th class="px-4 py-2 bg-gray-700 text-gray-400 font-bold uppercase">Total Balance</th>
+                <th class="px-4 py-2 bg-gray-700 text-gray-400 font-bold uppercase">Accumulated Interest</th>
+                <th class="px-4 py-2 bg-gray-700 text-gray-400 font-bold uppercase">Principal + Contributions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for year, balance, interest, principal in data %}
+            <tr class="{% if loop.index % 2 == 0 %}bg-gray-700{% else %}bg-gray-800{% endif %}">
+                <td class="px-4 py-2">{{ year }}</td>
+                <td class="px-4 py-2">${{ "{:,.2f}".format(balance) }}</td>
+                <td class="px-4 py-2">${{ "{:,.2f}".format(interest) }}</td>
+                <td class="px-4 py-2">${{ "{:,.2f}".format(principal) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endblock %}
