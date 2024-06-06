@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Debt Calculator{% endblock %}
+
+{% block content %}
+<h1 class="text-4xl font-bold mb-8 text-center">Debt Calculator</h1>
+<div class="bg-gray-800 shadow-md rounded-lg p-6 max-w-2xl mx-auto">
+    <p class="text-gray-400 mb-6">Use this tool to calculate your debt repayment plan, including how long it will take to pay off your debts and how much interest you'll pay.</p>
+    
+    <form method="post" class="space-y-6">
+        <!-- Placeholder for debt calculator form -->
+        <div>
+            <label for="total_debt" class="block text-gray-400 font-bold mb-2">Total Debt ($)</label>
+            <input type="number" step="0.01" class="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500" id="total_debt" name="total_debt" placeholder="e.g., 15000" required>
+        </div>
+        
+        <div>
+            <label for="interest_rate" class="block text-gray-400 font-bold mb-2">Average Interest Rate (%)</label>
+            <input type="number" step="0.01" class="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500" id="interest_rate" name="interest_rate" placeholder="e.g., 18.5" required>
+        </div>
+        
+        <div>
+            <label for="monthly_payment" class="block text-gray-400 font-bold mb-2">Monthly Payment ($)</label>
+            <input type="number" step="0.01" class="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500" id="monthly_payment" name="monthly_payment" placeholder="e.g., 500" required>
+        </div>
+        
+        <div class="flex justify-center">
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg">Calculate Repayment Plan</button>
+        </div>
+    </form>
+    
+    <div class="mt-8">
+        <!-- Placeholder for calculation results -->
+        <p class="text-gray-400">Your debt repayment results will appear here.</p>
+    </div>
+</div>
+{% endblock %}

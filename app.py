@@ -62,6 +62,14 @@ def index():
     # Render the template for the initial GET request
     return render_template('index.html')
 
+@app.route('/debt-calculator', methods=['GET', 'POST'])
+def debt_calculator():
+    if request.method == 'POST':
+        # Here you'll handle form submission and perform debt calculations
+        # For now, we'll just render the template without any calculations
+        pass
+    return render_template('debt_calculator.html')
+
 def generate_plot(years, balances, interest_amounts, principal_amounts):
     # Create a new figure and axes
     fig, ax = plt.subplots(figsize=(6, 6), dpi=100, tight_layout=True)
