@@ -28,19 +28,27 @@ def calculate_debt_payoff(total_debt, interest_rate, monthly_payment):
     monthly_rate = annual_rate / 12
 
     if monthly_payment <= total_debt * monthly_rate:
-        return None, None, None  # Payment is too low to cover interest
+        return None, None, None, None, None  # Payment is too low to cover interest
 
     months = 0
     remaining_debt = total_debt
     total_interest = 0
+    total_principal = 0
 
     payment_schedule = []
+    graph_data = {
+        'months': [0],
+        'remaining_debt': [total_debt],
+        'cumulative_interest': [0],
+        'cumulative_principal': [0]
+    }
 
     while remaining_debt > 0:
         interest = remaining_debt * monthly_rate
         principal = min(monthly_payment - interest, remaining_debt)
         
         total_interest += interest
+        total_principal += principal
         remaining_debt -= principal
         months += 1
 
@@ -52,10 +60,15 @@ def calculate_debt_payoff(total_debt, interest_rate, monthly_payment):
             'remaining': max(remaining_debt, 0)
         })
 
+        graph_data['months'].append(months)
+        graph_data['remaining_debt'].append(max(remaining_debt, 0))
+        graph_data['cumulative_interest'].append(total_interest)
+        graph_data['cumulative_principal'].append(total_principal)
+
         if months > 1200:  # To prevent infinite loop in case of errors
             break
 
     years = months // 12
     extra_months = months % 12
 
-    return years, extra_months, total_interest, payment_schedule
+    return years, extra_months, total_interest, payment_schedule, graph_data
