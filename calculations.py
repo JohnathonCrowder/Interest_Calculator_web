@@ -22,3 +22,40 @@ def calculate_growth(initial_amount, annual_rate, monthly_contribution, years, c
     balance = total_amount
 
     return interest, balance
+
+def calculate_debt_payoff(total_debt, interest_rate, monthly_payment):
+    annual_rate = interest_rate / 100
+    monthly_rate = annual_rate / 12
+
+    if monthly_payment <= total_debt * monthly_rate:
+        return None, None, None  # Payment is too low to cover interest
+
+    months = 0
+    remaining_debt = total_debt
+    total_interest = 0
+
+    payment_schedule = []
+
+    while remaining_debt > 0:
+        interest = remaining_debt * monthly_rate
+        principal = min(monthly_payment - interest, remaining_debt)
+        
+        total_interest += interest
+        remaining_debt -= principal
+        months += 1
+
+        payment_schedule.append({
+            'month': months,
+            'payment': monthly_payment if remaining_debt > 0 else principal + interest,
+            'principal': principal,
+            'interest': interest,
+            'remaining': max(remaining_debt, 0)
+        })
+
+        if months > 1200:  # To prevent infinite loop in case of errors
+            break
+
+    years = months // 12
+    extra_months = months % 12
+
+    return years, extra_months, total_interest, payment_schedule

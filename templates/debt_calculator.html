@@ -1,3 +1,4 @@
+<!-- debt_calculator.html -->
 {% extends "base.html" %}
 
 {% block title %}Debt Calculator{% endblock %}
@@ -8,20 +9,19 @@
     <p class="text-gray-400 mb-6">Use this tool to calculate your debt repayment plan, including how long it will take to pay off your debts and how much interest you'll pay.</p>
     
     <form method="post" class="space-y-6">
-        <!-- Placeholder for debt calculator form -->
         <div>
             <label for="total_debt" class="block text-gray-400 font-bold mb-2">Total Debt ($)</label>
-            <input type="number" step="0.01" class="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500" id="total_debt" name="total_debt" placeholder="e.g., 15000" required>
+            <input type="number" step="0.01" class="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500" id="total_debt" name="total_debt" placeholder="e.g., 15000" value="{{ total_debt }}" required>
         </div>
         
         <div>
             <label for="interest_rate" class="block text-gray-400 font-bold mb-2">Average Interest Rate (%)</label>
-            <input type="number" step="0.01" class="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500" id="interest_rate" name="interest_rate" placeholder="e.g., 18.5" required>
+            <input type="number" step="0.01" class="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500" id="interest_rate" name="interest_rate" placeholder="e.g., 18.5" value="{{ interest_rate }}" required>
         </div>
         
         <div>
             <label for="monthly_payment" class="block text-gray-400 font-bold mb-2">Monthly Payment ($)</label>
-            <input type="number" step="0.01" class="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500" id="monthly_payment" name="monthly_payment" placeholder="e.g., 500" required>
+            <input type="number" step="0.01" class="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500" id="monthly_payment" name="monthly_payment" placeholder="e.g., 500" value="{{ monthly_payment }}" required>
         </div>
         
         <div class="flex justify-center">
@@ -29,9 +29,47 @@
         </div>
     </form>
     
-    <div class="mt-8">
-        <!-- Placeholder for calculation results -->
-        <p class="text-gray-400">Your debt repayment results will appear here.</p>
+    {% if years is not none %}
+    <div class="mt-8 space-y-6">
+        <h2 class="text-2xl font-bold text-center">Debt Repayment Results</h2>
+        
+        <div class="bg-gray-700 p-4 rounded-lg">
+            <p class="text-lg"><strong>Time to Pay Off Debt:</strong> {{ years }} year(s) {% if extra_months and extra_months > 0 %}and {{ extra_months }} month(s){% endif %}</p>
+            <p class="text-lg"><strong>Total Interest Paid:</strong> ${{ "{:,.2f}".format(total_interest) }}</p>
+            <p class="text-lg"><strong>Total Amount Paid:</strong> ${{ "{:,.2f}".format(total_debt + total_interest) }}</p>
+        </div>
+
+        <div>
+            <h3 class="text-xl font-bold mb-4">Payment Schedule</h3>
+            <table class="w-full text-left table-collapse">
+                <thead>
+                    <tr>
+                        <th class="px-4 py-2 bg-gray-700 text-gray-400 font-bold uppercase">Month</th>
+                        <th class="px-4 py-2 bg-gray-700 text-gray-400 font-bold uppercase">Payment</th>
+                        <th class="px-4 py-2 bg-gray-700 text-gray-400 font-bold uppercase">Principal</th>
+                        <th class="px-4 py-2 bg-gray-700 text-gray-400 font-bold uppercase">Interest</th>
+                        <th class="px-4 py-2 bg-gray-700 text-gray-400 font-bold uppercase">Remaining</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payment in payment_schedule %}
+                    <tr class="{% if loop.index % 2 == 0 %}bg-gray-700{% else %}bg-gray-800{% endif %}">
+                        <td class="px-4 py-2">{{ payment.month }}</td>
+                        <td class="px-4 py-2">${{ "{:,.2f}".format(payment.payment) }}</td>
+                        <td class="px-4 py-2">${{ "{:,.2f}".format(payment.principal) }}</td>
+                        <td class="px-4 py-2">${{ "{:,.2f}".format(payment.interest) }}</td>
+                        <td class="px-4 py-2">${{ "{:,.2f}".format(payment.remaining) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
+    {% elif years is not none and request.method == 'POST' %}
+    <div class="mt-8 bg-red-800 text-white p-4 rounded-lg">
+        <p class="font-bold">Warning:</p>
+        <p>Your monthly payment (${{ "{:,.2f}".format(monthly_payment) }}) is too low. It doesn't even cover the monthly interest (${{"%.2f" % (total_debt * interest_rate / 1200) }}). You need to pay more to make progress on your debt.</p>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

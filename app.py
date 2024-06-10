@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request
-from calculations import calculate_growth
+from calculations import calculate_growth, calculate_debt_payoff
 
 import io
 import base64
@@ -64,11 +64,29 @@ def index():
 
 @app.route('/debt-calculator', methods=['GET', 'POST'])
 def debt_calculator():
+    total_debt = 0
+    interest_rate = 0
+    monthly_payment = 0
+    years = None
+    extra_months = None
+    total_interest = None
+    payment_schedule = None
+
     if request.method == 'POST':
-        # Here you'll handle form submission and perform debt calculations
-        # For now, we'll just render the template without any calculations
-        pass
-    return render_template('debt_calculator.html')
+        total_debt = float(request.form.get('total_debt', 0))
+        interest_rate = float(request.form.get('interest_rate', 0))
+        monthly_payment = float(request.form.get('monthly_payment', 0))
+
+        years, extra_months, total_interest, payment_schedule = calculate_debt_payoff(total_debt, interest_rate, monthly_payment)
+
+    return render_template('debt_calculator.html', 
+                        total_debt=total_debt,
+                        interest_rate=interest_rate,
+                        monthly_payment=monthly_payment,
+                        years=years,
+                        extra_months=extra_months,
+                        total_interest=total_interest,
+                        payment_schedule=payment_schedule)
 
 def generate_plot(years, balances, interest_amounts, principal_amounts):
     # Create a new figure and axes
