@@ -3,68 +3,115 @@
 
 {% block title %}Debt Calculator{% endblock %}
 
+{% block head %}
+<style>
+    /* Fade in animation */
+    .fade-in {
+        animation: fadeIn 0.5s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <h1 class="text-4xl font-bold mb-8 text-center">Debt Calculator</h1>
-<div class="bg-gray-800 shadow-md rounded-lg p-6 max-w-2xl mx-auto">
-    <p class="text-gray-400 mb-6">Use this tool to calculate your debt repayment plan, including how long it will take to pay off your debts and how much interest you'll pay.</p>
-    
-    <form id="debtForm" class="space-y-6">
-        <div>
-            <label for="total_debt" class="block text-gray-400 font-bold mb-2">Total Debt ($)</label>
-            <input type="number" step="0.01" class="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500" id="total_debt" name="total_debt" placeholder="e.g., 15000" value="{{ total_debt }}" required oninput="debouncedUpdate()">
-        </div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <div class="bg-gray-800 shadow-md rounded-lg p-6">
+        <p class="text-gray-400 mb-6">Use this tool to calculate your debt repayment plan, including how long it will take to pay off your debts and how much interest you'll pay.</p>
         
-        <div>
-            <label for="interest_rate" class="block text-gray-400 font-bold mb-2">Average Interest Rate (%)</label>
-            <input type="number" step="0.01" class="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500" id="interest_rate" name="interest_rate" placeholder="e.g., 18.5" value="{{ interest_rate }}" required oninput="debouncedUpdate()">
-        </div>
-        
-        <div>
-            <label for="monthly_payment" class="block text-gray-400 font-bold mb-2">Monthly Payment ($)</label>
-            <input type="range" class="w-full" id="monthly_payment" name="monthly_payment" min="1" max="1000" step="1" value="1" oninput="updateSliderValue(this.value); debouncedUpdate()">
-            <div class="flex justify-between mt-2">
-                <span class="text-gray-400">$1</span>
-                <span id="sliderValue" class="text-gray-400">$1</span>
-                <span class="text-gray-400">$1,000</span>
+        <form id="debtForm" class="space-y-6">
+            <div class="mb-6">
+                <label for="total_debt" class="block text-gray-400 font-bold mb-2 flex items-center">
+                    <i class="fas fa-dollar-sign mr-2 text-blue-500"></i>
+                    Total Debt
+                </label>
+                <div class="relative">
+                    <input type="number" step="0.01" class="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500 pr-8" id="total_debt" name="total_debt" placeholder="e.g., 15000" value="{{ total_debt }}" required oninput="debouncedUpdate()">
+                    <span class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-gray-500">
+                        $
+                    </span>
+                </div>
             </div>
-        </div>
-    </form>
-    
-    <div id="results" class="space-y-6 hidden">
-        <h2 class="text-2xl font-bold text-center">Debt Repayment Results</h2>
-        
-        <div id="summary" class="bg-gray-700 p-4 rounded-lg">
-            <!-- Summary will be populated by JavaScript -->
-        </div>
+            
+            <div class="mb-6">
+                <label for="interest_rate" class="block text-gray-400 font-bold mb-2 flex items-center">
+                    <i class="fas fa-percentage mr-2 text-blue-500"></i>
+                    Average Interest Rate
+                </label>
+                <div class="relative">
+                    <input type="number" step="0.01" class="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500 pr-8" id="interest_rate" name="interest_rate" placeholder="e.g., 18.5" value="{{ interest_rate }}" required oninput="debouncedUpdate()">
+                    <span class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-gray-500">
+                        %
+                    </span>
+                </div>
+            </div>
+            
+            <div class="mb-6">
+                <label for="monthly_payment" class="block text-gray-400 font-bold mb-2 flex items-center">
+                    <i class="fas fa-money-bill-wave mr-2 text-blue-500"></i>
+                    Monthly Payment
+                </label>
+                <input type="range" class="w-full" id="monthly_payment" name="monthly_payment" min="1" max="1000" step="1" value="1" oninput="updateSliderValue(this.value); debouncedUpdate()">
+                <div class="flex justify-between mt-2">
+                    <span class="text-gray-400">$1</span>
+                    <span id="sliderValue" class="text-gray-400 font-bold">$1</span>
+                    <span class="text-gray-400">$1,000</span>
+                </div>
+            </div>
+        </form>
+    </div>
 
-        <div id="graph" class="mt-8 hidden">
-            <h2 class="text-2xl font-bold mb-6 text-center">Debt Repayment Graph</h2>
-            <div class="bg-gray-800 shadow-md rounded-lg p-6">
+    <div>
+        <div id="loading" class="text-center mt-8 hidden">
+            <i class="fas fa-spinner fa-spin text-blue-500 text-3xl"></i>
+            <p class="mt-4 text-gray-400">Calculating your debt repayment plan...</p>
+        </div>
+        
+        <div id="results" class="space-y-6 hidden">
+            <div class="bg-gray-800 p-6 rounded-lg shadow-md fade-in">
+                <h2 class="text-2xl font-bold mb-6 text-center text-blue-500">Debt Repayment Summary</h2>
+                <div id="summary" class="space-y-4">
+                    <!-- Summary will be populated by JavaScript -->
+                </div>
+            </div>
+
+            <div id="graph" class="bg-gray-800 p-6 rounded-lg shadow-md fade-in hidden">
+                <h2 class="text-2xl font-bold mb-6 text-center text-blue-500">Debt Repayment Progress</h2>
                 <img id="repayment_graph" src="" alt="Debt Repayment Graph" class="mx-auto">
             </div>
-        </div>
 
-        <div id="schedule" class="hidden">
-            <h3 class="text-xl font-bold mb-4">Payment Schedule</h3>
-            <table class="w-full text-left table-collapse">
-                <thead>
-                    <tr>
-                        <th class="px-4 py-2 bg-gray-700 text-gray-400 font-bold uppercase">Month</th>
-                        <th class="px-4 py-2 bg-gray-700 text-gray-400 font-bold uppercase">Payment</th>
-                        <th class="px-4 py-2 bg-gray-700 text-gray-400 font-bold uppercase">Principal</th>
-                        <th class="px-4 py-2 bg-gray-700 text-gray-400 font-bold uppercase">Interest</th>
-                        <th class="px-4 py-2 bg-gray-700 text-gray-400 font-bold uppercase">Remaining</th>
-                    </tr>
-                </thead>
-                <tbody id="schedule_body">
-                    <!-- Payment schedule will be populated by JavaScript -->
-                </tbody>
-            </table>
-        </div>
+            <div id="schedule" class="bg-gray-800 p-6 rounded-lg shadow-md fade-in hidden">
+                <h3 class="text-xl font-bold mb-4 text-blue-500">Payment Schedule</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left table-collapse">
+                        <thead>
+                            <tr class="bg-gray-700">
+                                <th class="px-4 py-2 text-gray-400 font-bold uppercase">Month</th>
+                                <th class="px-4 py-2 text-gray-400 font-bold uppercase">Payment</th>
+                                <th class="px-4 py-2 text-gray-400 font-bold uppercase">Principal</th>
+                                <th class="px-4 py-2 text-gray-400 font-bold uppercase">Interest</th>
+                                <th class="px-4 py-2 text-gray-400 font-bold uppercase">Remaining</th>
+                            </tr>
+                        </thead>
+                        <tbody id="schedule_body">
+                            <!-- Payment schedule will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
-        <div id="warning" class="mt-8 bg-red-800 text-white p-4 rounded-lg hidden">
-            <p class="font-bold">Warning:</p>
-            <p id="warning_message"></p>
+            <div id="warning" class="mt-8 bg-red-800 text-white p-4 rounded-lg hidden fade-in">
+                <p class="font-bold">Warning:</p>
+                <p id="warning_message"></p>
+            </div>
         </div>
     </div>
 </div>
@@ -97,10 +144,13 @@ async function updateResults() {
 
     if (monthlyPayment < monthlyInterest) {
         const warningMessage = document.getElementById('warning_message');
-        warningMessage.textContent = `Your monthly payment ($${monthlyPayment.toFixed(2)}) is too low. It doesn't even cover the monthly interest ($${monthlyInterest.toFixed(2)}). You need to pay more to make progress on your debt.`;
+        warningMessage.innerHTML = `Your monthly payment <strong>($${monthlyPayment.toFixed(2)})</strong> is too low. It doesn't even cover the monthly interest <strong>($${monthlyInterest.toFixed(2)})</strong>. You need to pay more to make progress on your debt.`;
         document.getElementById('warning').classList.remove('hidden');
         return;  // Don't proceed with calculations if payment is too low
     }
+
+    // Show loading spinner
+    document.getElementById('loading').classList.remove('hidden');
 
     try {
         const response = await fetch('/calculate-debt', {
@@ -116,9 +166,9 @@ async function updateResults() {
 
         // Update summary
         document.getElementById('summary').innerHTML = `
-            <p class="text-lg"><strong>Time to Pay Off Debt:</strong> ${data.years ? data.years + ' year(s)' : ''} ${data.extra_months ? `and ${data.extra_months} month(s)` : ''}</p>
-            <p class="text-lg"><strong>Total Interest Paid:</strong> $${data.total_interest.toFixed(2)}</p>
-            <p class="text-lg"><strong>Total Amount Paid:</strong> $${(parseFloat(totalDebt) + data.total_interest).toFixed(2)}</p>
+            <p class="text-lg"><strong class="text-blue-500">Time to Pay Off Debt:</strong> <span class="text-white">${data.years ? data.years + ' year(s)' : ''} ${data.extra_months ? `and ${data.extra_months} month(s)` : ''}</span></p>
+            <p class="text-lg"><strong class="text-blue-500">Total Interest Paid:</strong> <span class="text-white">$${data.total_interest.toFixed(2)}</span></p>
+            <p class="text-lg"><strong class="text-blue-500">Total Amount Paid:</strong> <span class="text-white">$${(parseFloat(totalDebt) + data.total_interest).toFixed(2)}</span></p>
         `;
 
         // Update graph
@@ -131,17 +181,21 @@ async function updateResults() {
         const scheduleBody = document.getElementById('schedule_body');
         if (data.payment_schedule.length > 0) {
             scheduleBody.innerHTML = data.payment_schedule.map(payment => `
-                <tr class="bg-gray-800">
-                    <td class="px-4 py-2">${payment.month}</td>
-                    <td class="px-4 py-2">$${payment.payment.toFixed(2)}</td>
-                    <td class="px-4 py-2">$${payment.principal.toFixed(2)}</td>
-                    <td class="px-4 py-2">$${payment.interest.toFixed(2)}</td>
-                    <td class="px-4 py-2">$${payment.remaining.toFixed(2)}</td>
+                <tr class="hover:bg-gray-700">
+                    <td class="px-4 py-2 text-white">${payment.month}</td>
+                    <td class="px-4 py-2 text-white">$${payment.payment.toFixed(2)}</td>
+                    <td class="px-4 py-2 text-green-500">$${payment.principal.toFixed(2)}</td>
+                    <td class="px-4 py-2 text-red-500">$${payment.interest.toFixed(2)}</td>
+                    <td class="px-4 py-2 text-white">$${payment.remaining.toFixed(2)}</td>
                 </tr>
             `).join('');
             document.getElementById('schedule').classList.remove('hidden');
         }
 
+        // Hide loading spinner
+        document.getElementById('loading').classList.add('hidden');
+
+        // Show results with fade-in effect
         document.getElementById('results').classList.remove('hidden');
     } catch (error) {
         console.error('Error:', error);
