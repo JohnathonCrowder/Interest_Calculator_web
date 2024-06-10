@@ -8,47 +8,43 @@
 <div class="bg-gray-800 shadow-md rounded-lg p-6 max-w-2xl mx-auto">
     <p class="text-gray-400 mb-6">Use this tool to calculate your debt repayment plan, including how long it will take to pay off your debts and how much interest you'll pay.</p>
     
-    <form method="post" class="space-y-6">
+    <form id="debtForm" class="space-y-6">
         <div>
             <label for="total_debt" class="block text-gray-400 font-bold mb-2">Total Debt ($)</label>
-            <input type="number" step="0.01" class="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500" id="total_debt" name="total_debt" placeholder="e.g., 15000" value="{{ total_debt }}" required>
+            <input type="number" step="0.01" class="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500" id="total_debt" name="total_debt" placeholder="e.g., 15000" value="{{ total_debt }}" required oninput="debouncedUpdate()">
         </div>
         
         <div>
             <label for="interest_rate" class="block text-gray-400 font-bold mb-2">Average Interest Rate (%)</label>
-            <input type="number" step="0.01" class="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500" id="interest_rate" name="interest_rate" placeholder="e.g., 18.5" value="{{ interest_rate }}" required>
+            <input type="number" step="0.01" class="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500" id="interest_rate" name="interest_rate" placeholder="e.g., 18.5" value="{{ interest_rate }}" required oninput="debouncedUpdate()">
         </div>
         
         <div>
             <label for="monthly_payment" class="block text-gray-400 font-bold mb-2">Monthly Payment ($)</label>
-            <input type="number" step="0.01" class="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500" id="monthly_payment" name="monthly_payment" placeholder="e.g., 500" value="{{ monthly_payment }}" required>
-        </div>
-        
-        <div class="flex justify-center">
-            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg">Calculate Repayment Plan</button>
+            <input type="range" class="w-full" id="monthly_payment" name="monthly_payment" min="1" max="1000" step="1" value="1" oninput="updateSliderValue(this.value); debouncedUpdate()">
+            <div class="flex justify-between mt-2">
+                <span class="text-gray-400">$1</span>
+                <span id="sliderValue" class="text-gray-400">$1</span>
+                <span class="text-gray-400">$1,000</span>
+            </div>
         </div>
     </form>
     
-    {% if years is not none %}
-    <div class="mt-8 space-y-6">
+    <div id="results" class="space-y-6 hidden">
         <h2 class="text-2xl font-bold text-center">Debt Repayment Results</h2>
         
-        <div class="bg-gray-700 p-4 rounded-lg">
-            <p class="text-lg"><strong>Time to Pay Off Debt:</strong> {{ years }} year(s) {% if extra_months and extra_months > 0 %}and {{ extra_months }} month(s){% endif %}</p>
-            <p class="text-lg"><strong>Total Interest Paid:</strong> ${{ "{:,.2f}".format(total_interest) }}</p>
-            <p class="text-lg"><strong>Total Amount Paid:</strong> ${{ "{:,.2f}".format(total_debt + total_interest) }}</p>
+        <div id="summary" class="bg-gray-700 p-4 rounded-lg">
+            <!-- Summary will be populated by JavaScript -->
         </div>
 
-        {% if plot_data %}
-        <div class="mt-8">
+        <div id="graph" class="mt-8 hidden">
             <h2 class="text-2xl font-bold mb-6 text-center">Debt Repayment Graph</h2>
             <div class="bg-gray-800 shadow-md rounded-lg p-6">
-                <img src="data:image/png;base64,{{ plot_data }}" alt="Debt Repayment Graph" class="mx-auto">
+                <img id="repayment_graph" src="" alt="Debt Repayment Graph" class="mx-auto">
             </div>
         </div>
-        {% endif %}
 
-        <div>
+        <div id="schedule" class="hidden">
             <h3 class="text-xl font-bold mb-4">Payment Schedule</h3>
             <table class="w-full text-left table-collapse">
                 <thead>
@@ -60,25 +56,116 @@
                         <th class="px-4 py-2 bg-gray-700 text-gray-400 font-bold uppercase">Remaining</th>
                     </tr>
                 </thead>
-                <tbody>
-                    {% for payment in payment_schedule %}
-                    <tr class="{% if loop.index % 2 == 0 %}bg-gray-700{% else %}bg-gray-800{% endif %}">
-                        <td class="px-4 py-2">{{ payment.month }}</td>
-                        <td class="px-4 py-2">${{ "{:,.2f}".format(payment.payment) }}</td>
-                        <td class="px-4 py-2">${{ "{:,.2f}".format(payment.principal) }}</td>
-                        <td class="px-4 py-2">${{ "{:,.2f}".format(payment.interest) }}</td>
-                        <td class="px-4 py-2">${{ "{:,.2f}".format(payment.remaining) }}</td>
-                    </tr>
-                    {% endfor %}
+                <tbody id="schedule_body">
+                    <!-- Payment schedule will be populated by JavaScript -->
                 </tbody>
             </table>
         </div>
+
+        <div id="warning" class="mt-8 bg-red-800 text-white p-4 rounded-lg hidden">
+            <p class="font-bold">Warning:</p>
+            <p id="warning_message"></p>
+        </div>
     </div>
-    {% elif years is not none and request.method == 'POST' %}
-    <div class="mt-8 bg-red-800 text-white p-4 rounded-lg">
-        <p class="font-bold">Warning:</p>
-        <p>Your monthly payment (${{ "{:,.2f}".format(monthly_payment) }}) is too low. It doesn't even cover the monthly interest (${{"%.2f" % (total_debt * interest_rate / 1200) }}). You need to pay more to make progress on your debt.</p>
-    </div>
-    {% endif %}
 </div>
+
+<script>
+function updateSliderValue(value) {
+    document.getElementById('sliderValue').textContent = `$${value}`;
+}
+
+async function updateResults() {
+    const form = document.getElementById('debtForm');
+    const formData = new FormData(form);
+    const totalDebt = parseFloat(document.getElementById('total_debt').value);
+    const interestRate = parseFloat(document.getElementById('interest_rate').value);
+    const monthlyPayment = parseFloat(document.getElementById('monthly_payment').value);
+
+    // Reset the visibility of elements
+    document.getElementById('results').classList.add('hidden');
+    document.getElementById('graph').classList.add('hidden');
+    document.getElementById('schedule').classList.add('hidden');
+    document.getElementById('warning').classList.add('hidden');
+
+    // Check if all inputs are valid
+    if (isNaN(totalDebt) || isNaN(interestRate) || isNaN(monthlyPayment)) {
+        return;  // Don't update if any input is invalid
+    }
+
+    // Calculate monthly interest
+    const monthlyInterest = totalDebt * (interestRate / 100 / 12);
+
+    if (monthlyPayment < monthlyInterest) {
+        const warningMessage = document.getElementById('warning_message');
+        warningMessage.textContent = `Your monthly payment ($${monthlyPayment.toFixed(2)}) is too low. It doesn't even cover the monthly interest ($${monthlyInterest.toFixed(2)}). You need to pay more to make progress on your debt.`;
+        document.getElementById('warning').classList.remove('hidden');
+        return;  // Don't proceed with calculations if payment is too low
+    }
+
+    try {
+        const response = await fetch('/calculate-debt', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+
+        const data = await response.json();
+
+        // Update summary
+        document.getElementById('summary').innerHTML = `
+            <p class="text-lg"><strong>Time to Pay Off Debt:</strong> ${data.years ? data.years + ' year(s)' : ''} ${data.extra_months ? `and ${data.extra_months} month(s)` : ''}</p>
+            <p class="text-lg"><strong>Total Interest Paid:</strong> $${data.total_interest.toFixed(2)}</p>
+            <p class="text-lg"><strong>Total Amount Paid:</strong> $${(parseFloat(totalDebt) + data.total_interest).toFixed(2)}</p>
+        `;
+
+        // Update graph
+        if (data.plot_data) {
+            document.getElementById('repayment_graph').src = `data:image/png;base64,${data.plot_data}`;
+            document.getElementById('graph').classList.remove('hidden');
+        }
+
+        // Update payment schedule
+        const scheduleBody = document.getElementById('schedule_body');
+        if (data.payment_schedule.length > 0) {
+            scheduleBody.innerHTML = data.payment_schedule.map(payment => `
+                <tr class="bg-gray-800">
+                    <td class="px-4 py-2">${payment.month}</td>
+                    <td class="px-4 py-2">$${payment.payment.toFixed(2)}</td>
+                    <td class="px-4 py-2">$${payment.principal.toFixed(2)}</td>
+                    <td class="px-4 py-2">$${payment.interest.toFixed(2)}</td>
+                    <td class="px-4 py-2">$${payment.remaining.toFixed(2)}</td>
+                </tr>
+            `).join('');
+            document.getElementById('schedule').classList.remove('hidden');
+        }
+
+        document.getElementById('results').classList.remove('hidden');
+    } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred while calculating the debt repayment plan.');
+    }
+}
+
+// Debounce function to delay execution
+function debounce(func, delay) {
+    let timeoutId;
+    return function() {
+        const context = this;
+        const args = arguments;
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+            func.apply(context, args);
+        }, delay);
+    };
+}
+
+// Create a debounced version of updateResults
+const debouncedUpdate = debounce(updateResults, 500);  // 500ms delay
+
+// Call updateResults() when the page loads to initialize with default values
+document.addEventListener('DOMContentLoaded', updateResults);
+</script>
 {% endblock %}

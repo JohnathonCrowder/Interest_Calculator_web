@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 from calculations import calculate_growth, calculate_debt_payoff
 
 import io
@@ -92,6 +92,23 @@ def debt_calculator():
                           payment_schedule=payment_schedule,
                           plot_data=plot_data)
 
+@app.route('/calculate-debt', methods=['POST'])
+def calculate_debt():
+    total_debt = float(request.form.get('total_debt', 0))
+    interest_rate = float(request.form.get('interest_rate', 0))
+    monthly_payment = float(request.form.get('monthly_payment', 0))
+
+    years, extra_months, total_interest, payment_schedule, graph_data = calculate_debt_payoff(total_debt, interest_rate, monthly_payment)
+    plot_data = generate_debt_plot(graph_data) if graph_data else None
+
+    return jsonify({
+        'years': years,
+        'extra_months': extra_months,
+        'total_interest': total_interest,
+        'payment_schedule': payment_schedule,
+        'plot_data': plot_data
+    })
+
 def generate_plot(years, balances, interest_amounts, principal_amounts):
     # Create a new figure and axes
     fig, ax = plt.subplots(figsize=(6, 6), dpi=100, tight_layout=True)
@@ -152,9 +169,8 @@ def generate_debt_plot(graph_data):
     ax.plot(months, cumulative_interest, marker='o', label='Cumulative Interest', color='#f39c12', linewidth=2)
     ax.plot(months, cumulative_principal, marker='o', label='Cumulative Principal', color='#2ecc71', linewidth=2)
 
-    ax.fill_between(months, 0, remaining_debt, color='#e74c3c', alpha=0.3, label='Remaining Debt Area')
-    ax.fill_between(months, 0, cumulative_interest, color='#f39c12', alpha=0.3, label='Interest Area')
     ax.fill_between(months, 0, cumulative_principal, color='#2ecc71', alpha=0.3, label='Principal Area')
+    ax.fill_between(months, cumulative_principal, [a + b for a, b in zip(cumulative_principal, cumulative_interest)], color='#f39c12', alpha=0.3, label='Interest Area')
 
     ax.set_xlabel('Months', fontsize=10)
     ax.set_ylabel('Amount ($)', fontsize=10)
