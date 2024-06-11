@@ -23,6 +23,16 @@ def calculate_growth(initial_amount, annual_rate, monthly_contribution, years, c
 
     return interest, balance
 
+def calculate_monthly_payment(total_debt, interest_rate, months):
+    annual_rate = interest_rate / 100
+    monthly_rate = annual_rate / 12
+
+    if monthly_rate == 0:
+        return total_debt / months
+    else:
+        monthly_payment = (total_debt * monthly_rate) / (1 - (1 + monthly_rate) ** -months)
+        return round(monthly_payment, 2)
+
 def calculate_debt_payoff(total_debt, interest_rate, monthly_payment):
     annual_rate = interest_rate / 100
     monthly_rate = annual_rate / 12

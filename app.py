@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, jsonify
-from calculations import calculate_growth, calculate_debt_payoff
+from calculations import calculate_growth, calculate_debt_payoff, calculate_monthly_payment
+import datetime
 
 import io
 import base64
@@ -108,6 +109,31 @@ def calculate_debt():
         'payment_schedule': payment_schedule,
         'plot_data': plot_data
     })
+
+@app.route('/calculate-monthly-payment', methods=['POST'])
+def calculate_monthly_payment_route():
+    data = request.get_json()
+    total_debt = float(data.get('total_debt', 0))
+    interest_rate = float(data.get('interest_rate', 0))
+    target_date_str = data.get('target_date')
+
+    if not total_debt or not interest_rate or not target_date_str:
+        return jsonify({'error': 'Invalid input data'})
+
+    try:
+        target_date = datetime.datetime.strptime(target_date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({'error': 'Invalid date format'})
+
+    today = datetime.date.today()
+    if target_date <= today:
+        return jsonify({'error': 'Target date must be in the future'})
+
+    months = (target_date.year - today.year) * 12 + target_date.month - today.month
+    monthly_payment = calculate_monthly_payment(total_debt, interest_rate, months)
+
+    return jsonify({'monthly_payment': monthly_payment})
+
 
 def generate_plot(years, balances, interest_amounts, principal_amounts):
     # Create a new figure and axes

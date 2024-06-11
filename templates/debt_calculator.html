@@ -53,18 +53,42 @@
                     </span>
                 </div>
             </div>
-            
+
             <div class="mb-6">
+                <label class="inline-flex items-center">
+                    <input type="checkbox" class="form-checkbox text-blue-500 bg-gray-700 border-gray-600 rounded" id="target_date_checkbox" onchange="toggleTargetDateInput()">
+                    <span class="ml-2 text-gray-400">Set Target Payoff Date</span>
+                </label>
+            </div>
+
+            <div id="target_date_input" class="mb-6 hidden">
+                <label for="target_date" class="block text-gray-400 font-bold mb-2 flex items-center">
+                    <i class="fas fa-calendar-alt mr-2 text-blue-500"></i>
+                    Target Payoff Date
+                </label>
+                <input type="date" class="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500" id="target_date" name="target_date">
+            </div>
+
+            <div id="monthly_payment_input" class="mb-6">
                 <label for="monthly_payment" class="block text-gray-400 font-bold mb-2 flex items-center">
                     <i class="fas fa-money-bill-wave mr-2 text-blue-500"></i>
                     Monthly Payment
                 </label>
-                <input type="range" class="w-full" id="monthly_payment" name="monthly_payment" min="1" max="1000" step="1" value="1" oninput="updateSliderValue(this.value); debouncedUpdate()">
+                <input type="range" class="w-full" id="monthly_payment" name="monthly_payment" min="1" max="1000" step="1" value="{{ monthly_payment }}" oninput="updateSliderValue(this.value); debouncedUpdate()">
                 <div class="flex justify-between mt-2">
                     <span class="text-gray-400">$1</span>
-                    <span id="sliderValue" class="text-gray-400 font-bold">$1</span>
+                    <span id="sliderValue" class="text-gray-400 font-bold">${{ monthly_payment }}</span>
                     <span class="text-gray-400">$1,000</span>
                 </div>
+            </div>
+
+            <div class="flex justify-between">
+                <button type="button" id="calculate_monthly_payment" onclick="calculateMonthlyPayment()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg hidden">
+                    Calculate Monthly Payment
+                </button>
+                <button type="button" onclick="debouncedUpdate()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg">
+                    Calculate Repayment
+                </button>
             </div>
         </form>
     </div>
@@ -83,12 +107,14 @@
                 </div>
             </div>
 
-            <div id="graph" class="bg-gray-800 p-6 rounded-lg shadow-md fade-in hidden">
+            <div id="graph" class="mt-8 hidden">
                 <h2 class="text-2xl font-bold mb-6 text-center text-blue-500">Debt Repayment Progress</h2>
-                <img id="repayment_graph" src="" alt="Debt Repayment Graph" class="mx-auto">
+                <div class="bg-gray-800 shadow-md rounded-lg p-6">
+                    <img id="repayment_graph" src="" alt="Debt Repayment Graph" class="mx-auto">
+                </div>
             </div>
 
-            <div id="schedule" class="bg-gray-800 p-6 rounded-lg shadow-md fade-in hidden">
+            <div id="schedule" class="hidden fade-in">
                 <h3 class="text-xl font-bold mb-4 text-blue-500">Payment Schedule</h3>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left table-collapse">
@@ -121,36 +147,72 @@ function updateSliderValue(value) {
     document.getElementById('sliderValue').textContent = `$${value}`;
 }
 
+function toggleTargetDateInput() {
+    const targetDateInput = document.getElementById('target_date_input');
+    const calculateMonthlyPaymentButton = document.getElementById('calculate_monthly_payment');
+    const targetDateCheckbox = document.getElementById('target_date_checkbox');
+    const monthlyPaymentInput = document.getElementById('monthly_payment_input');
+
+    if (targetDateCheckbox.checked) {
+        targetDateInput.classList.remove('hidden');
+        calculateMonthlyPaymentButton.classList.remove('hidden');
+        monthlyPaymentInput.classList.add('hidden');
+    } else {
+        targetDateInput.classList.add('hidden');
+        calculateMonthlyPaymentButton.classList.add('hidden');
+        monthlyPaymentInput.classList.remove('hidden');
+    }
+}
+
+async function calculateMonthlyPayment() {
+    const totalDebt = parseFloat(document.getElementById('total_debt').value);
+    const interestRate = parseFloat(document.getElementById('interest_rate').value);
+    const targetDate = document.getElementById('target_date').value;
+
+    if (isNaN(totalDebt) || isNaN(interestRate) || !targetDate) {
+        alert('Please fill in all the required fields.');
+        return;
+    }
+
+    document.getElementById('loading').classList.remove('hidden');
+    document.getElementById('results').classList.add('hidden');
+
+    try {
+        const response = await fetch('/calculate-monthly-payment', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ total_debt: totalDebt, interest_rate: interestRate, target_date: targetDate }),
+        });
+
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+
+        const data = await response.json();
+        if (data.error) {
+            alert(data.error);
+        } else {
+            document.getElementById('monthly_payment').value = data.monthly_payment;
+            updateSliderValue(data.monthly_payment);
+            await debouncedUpdate();
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred while calculating the monthly payment.');
+    } finally {
+        document.getElementById('loading').classList.add('hidden');
+    }
+}
+
 async function updateResults() {
     const form = document.getElementById('debtForm');
     const formData = new FormData(form);
-    const totalDebt = parseFloat(document.getElementById('total_debt').value);
-    const interestRate = parseFloat(document.getElementById('interest_rate').value);
-    const monthlyPayment = parseFloat(document.getElementById('monthly_payment').value);
 
-    // Reset the visibility of elements
-    document.getElementById('results').classList.add('hidden');
-    document.getElementById('graph').classList.add('hidden');
-    document.getElementById('schedule').classList.add('hidden');
-    document.getElementById('warning').classList.add('hidden');
-
-    // Check if all inputs are valid
-    if (isNaN(totalDebt) || isNaN(interestRate) || isNaN(monthlyPayment)) {
-        return;  // Don't update if any input is invalid
-    }
-
-    // Calculate monthly interest
-    const monthlyInterest = totalDebt * (interestRate / 100 / 12);
-
-    if (monthlyPayment < monthlyInterest) {
-        const warningMessage = document.getElementById('warning_message');
-        warningMessage.innerHTML = `Your monthly payment <strong>($${monthlyPayment.toFixed(2)})</strong> is too low. It doesn't even cover the monthly interest <strong>($${monthlyInterest.toFixed(2)})</strong>. You need to pay more to make progress on your debt.`;
-        document.getElementById('warning').classList.remove('hidden');
-        return;  // Don't proceed with calculations if payment is too low
-    }
-
-    // Show loading spinner
     document.getElementById('loading').classList.remove('hidden');
+    document.getElementById('results').classList.add('hidden');
+    document.getElementById('warning').classList.add('hidden');
 
     try {
         const response = await fetch('/calculate-debt', {
@@ -163,43 +225,43 @@ async function updateResults() {
         }
 
         const data = await response.json();
+        
+        if (data.error) {
+            document.getElementById('warning_message').textContent = data.error;
+            document.getElementById('warning').classList.remove('hidden');
+        } else {
+            document.getElementById('summary').innerHTML = `
+                <p class="text-lg"><strong class="text-blue-500">Time to Pay Off Debt:</strong> <span class="text-white">${data.years ? data.years + ' year(s)' : ''} ${data.extra_months ? `and ${data.extra_months} month(s)` : ''}</span></p>
+                <p class="text-lg"><strong class="text-blue-500">Total Interest Paid:</strong> <span class="text-white">$${data.total_interest.toFixed(2)}</span></p>
+                <p class="text-lg"><strong class="text-blue-500">Total Amount Paid:</strong> <span class="text-white">$${(parseFloat(document.getElementById('total_debt').value) + data.total_interest).toFixed(2)}</span></p>
+            `;
 
-        // Update summary
-        document.getElementById('summary').innerHTML = `
-            <p class="text-lg"><strong class="text-blue-500">Time to Pay Off Debt:</strong> <span class="text-white">${data.years ? data.years + ' year(s)' : ''} ${data.extra_months ? `and ${data.extra_months} month(s)` : ''}</span></p>
-            <p class="text-lg"><strong class="text-blue-500">Total Interest Paid:</strong> <span class="text-white">$${data.total_interest.toFixed(2)}</span></p>
-            <p class="text-lg"><strong class="text-blue-500">Total Amount Paid:</strong> <span class="text-white">$${(parseFloat(totalDebt) + data.total_interest).toFixed(2)}</span></p>
-        `;
+            if (data.plot_data) {
+                document.getElementById('repayment_graph').src = `data:image/png;base64,${data.plot_data}`;
+                document.getElementById('graph').classList.remove('hidden');
+            }
 
-        // Update graph
-        if (data.plot_data) {
-            document.getElementById('repayment_graph').src = `data:image/png;base64,${data.plot_data}`;
-            document.getElementById('graph').classList.remove('hidden');
+            const scheduleBody = document.getElementById('schedule_body');
+            if (data.payment_schedule.length > 0) {
+                scheduleBody.innerHTML = data.payment_schedule.map(payment => `
+                    <tr class="hover:bg-gray-700">
+                        <td class="px-4 py-2 text-white">${payment.month}</td>
+                        <td class="px-4 py-2 text-white">$${payment.payment.toFixed(2)}</td>
+                        <td class="px-4 py-2 text-green-500">$${payment.principal.toFixed(2)}</td>
+                        <td class="px-4 py-2 text-red-500">$${payment.interest.toFixed(2)}</td>
+                        <td class="px-4 py-2 text-white">$${payment.remaining.toFixed(2)}</td>
+                    </tr>
+                `).join('');
+                document.getElementById('schedule').classList.remove('hidden');
+            }
+
+            document.getElementById('results').classList.remove('hidden');
         }
-
-        // Update payment schedule
-        const scheduleBody = document.getElementById('schedule_body');
-        if (data.payment_schedule.length > 0) {
-            scheduleBody.innerHTML = data.payment_schedule.map(payment => `
-                <tr class="hover:bg-gray-700">
-                    <td class="px-4 py-2 text-white">${payment.month}</td>
-                    <td class="px-4 py-2 text-white">$${payment.payment.toFixed(2)}</td>
-                    <td class="px-4 py-2 text-green-500">$${payment.principal.toFixed(2)}</td>
-                    <td class="px-4 py-2 text-red-500">$${payment.interest.toFixed(2)}</td>
-                    <td class="px-4 py-2 text-white">$${payment.remaining.toFixed(2)}</td>
-                </tr>
-            `).join('');
-            document.getElementById('schedule').classList.remove('hidden');
-        }
-
-        // Hide loading spinner
-        document.getElementById('loading').classList.add('hidden');
-
-        // Show results with fade-in effect
-        document.getElementById('results').classList.remove('hidden');
     } catch (error) {
         console.error('Error:', error);
         alert('An error occurred while calculating the debt repayment plan.');
+    } finally {
+        document.getElementById('loading').classList.add('hidden');
     }
 }
 
@@ -219,7 +281,7 @@ function debounce(func, delay) {
 // Create a debounced version of updateResults
 const debouncedUpdate = debounce(updateResults, 500);  // 500ms delay
 
-// Call updateResults() when the page loads to initialize with default values
-document.addEventListener('DOMContentLoaded', updateResults);
+// Call toggleTargetDateInput() when the page loads to initialize the visibility of inputs
+document.addEventListener('DOMContentLoaded', toggleTargetDateInput);
 </script>
 {% endblock %}
