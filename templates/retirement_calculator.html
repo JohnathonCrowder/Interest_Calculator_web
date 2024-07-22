@@ -1,0 +1,154 @@
+<!-- retirement_calculator.html -->
+{% extends "base.html" %}
+
+{% block title %}Retirement Savings Calculator{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<h1 class="text-4xl font-bold mb-8 text-center">Retirement Savings Calculator</h1>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <div>
+        <form id="retirementForm" class="bg-gray-800 shadow-md rounded-lg p-6">
+            <div class="mb-6">
+                <label for="current_age" class="block text-gray-400 font-bold mb-2">Current Age</label>
+                <input type="number" class="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500" id="current_age" name="current_age" required>
+            </div>
+            <div class="mb-6">
+                <label for="retirement_age" class="block text-gray-400 font-bold mb-2">Retirement Age</label>
+                <input type="number" class="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500" id="retirement_age" name="retirement_age" required>
+            </div>
+            <div class="mb-6">
+                <label for="current_savings" class="block text-gray-400 font-bold mb-2">Current Savings ($)</label>
+                <input type="number" class="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500" id="current_savings" name="current_savings" required>
+            </div>
+            <div class="mb-6">
+                <label for="monthly_contribution" class="block text-gray-400 font-bold mb-2">Monthly Contribution ($)</label>
+                <input type="number" class="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500" id="monthly_contribution" name="monthly_contribution" required>
+            </div>
+            <div class="mb-6">
+                <label for="expected_return" class="block text-gray-400 font-bold mb-2">Expected Annual Return (%)</label>
+                <input type="number" step="0.1" class="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500" id="expected_return" name="expected_return" required>
+            </div>
+            <div class="mb-6">
+                <label for="inflation_rate" class="block text-gray-400 font-bold mb-2">Expected Inflation Rate (%)</label>
+                <input type="number" step="0.1" class="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500" id="inflation_rate" name="inflation_rate" value="2.0" required>
+            </div>
+            <div class="flex justify-center">
+                <button type="button" onclick="calculateRetirement()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg">Calculate</button>
+            </div>
+        </form>
+    </div>
+    <div id="results" class="bg-gray-800 shadow-md rounded-lg p-6 hidden">
+        <h2 class="text-2xl font-bold mb-6 text-center">Retirement Projections</h2>
+        <div id="resultContent" class="space-y-4">
+            <!-- Results will be populated here -->
+        </div>
+        <div class="mt-8">
+            <canvas id="savingsChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<script>
+let savingsChart;
+
+async function calculateRetirement() {
+    const form = document.getElementById('retirementForm');
+    const formData = new FormData(form);
+
+    try {
+        const response = await fetch('/calculate-retirement', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+
+        const data = await response.json();
+        
+        document.getElementById('resultContent').innerHTML = `
+            <p class="text-lg"><strong class="text-blue-500">Projected Retirement Savings:</strong> <span class="text-white">$${data.projected_savings.toLocaleString()}</span></p>
+            <p class="text-lg"><strong class="text-blue-500">Inflation-Adjusted Savings:</strong> <span class="text-white">$${data.inflation_adjusted_savings.toLocaleString()}</span></p>
+            <p class="text-lg"><strong class="text-blue-500">Total Contributions:</strong> <span class="text-white">$${data.total_contributions.toLocaleString()}</span></p>
+            <p class="text-lg"><strong class="text-blue-500">Total Interest Earned:</strong> <span class="text-white">$${data.total_interest.toLocaleString()}</span></p>
+        `;
+
+        document.getElementById('results').classList.remove('hidden');
+
+        createChart(data.yearly_data);
+    } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred while calculating retirement projections.');
+    }
+}
+
+function createChart(yearlyData) {
+    const ctx = document.getElementById('savingsChart').getContext('2d');
+    
+    if (savingsChart) {
+        savingsChart.destroy();
+    }
+
+    savingsChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: yearlyData.map(d => d.year),
+            datasets: [
+                {
+                    label: 'Projected Savings',
+                    data: yearlyData.map(d => d.balance),
+                    borderColor: 'rgb(75, 192, 192)',
+                    tension: 0.1
+                },
+                {
+                    label: 'Inflation-Adjusted Savings',
+                    data: yearlyData.map(d => d.inflation_adjusted_balance),
+                    borderColor: 'rgb(255, 99, 132)',
+                    tension: 0.1
+                },
+                {
+                    label: 'Contributions',
+                    data: yearlyData.map(d => d.total_contributions),
+                    borderColor: 'rgb(54, 162, 235)',
+                    tension: 0.1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value, index, values) {
+                            return '$' + value.toLocaleString();
+                        }
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                label += new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(context.parsed.y);
+                            }
+                            return label;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+</script>
+{% endblock %}

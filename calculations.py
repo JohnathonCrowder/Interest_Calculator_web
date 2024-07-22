@@ -80,3 +80,41 @@ def calculate_debt_payoff(total_debt, interest_rate, monthly_payment):
     extra_months = months % 12
 
     return years, extra_months, total_interest, payment_schedule, graph_data
+
+def calculate_retirement_savings(current_savings, monthly_contribution, annual_return, months):
+    monthly_return = annual_return / 12
+    future_value = current_savings * (1 + monthly_return) ** months
+    future_value += monthly_contribution * ((1 + monthly_return) ** months - 1) / monthly_return
+    return future_value
+
+def calculate_required_savings(current_savings, target_savings, annual_return, months):
+    monthly_return = annual_return / 12
+    required_monthly_savings = (target_savings - current_savings * (1 + monthly_return) ** months) / (((1 + monthly_return) ** months - 1) / monthly_return)
+    return required_monthly_savings
+
+def calculate_retirement_savings_with_inflation(current_savings, monthly_contribution, annual_return, inflation_rate, years):
+    monthly_return = annual_return / 12
+    monthly_inflation = inflation_rate / 12
+    yearly_data = []
+
+    balance = current_savings
+    inflation_adjusted_balance = current_savings
+    total_contributions = 0
+
+    for year in range(years + 1):
+        if year > 0:
+            for _ in range(12):
+                balance += monthly_contribution
+                balance *= (1 + monthly_return)
+                total_contributions += monthly_contribution
+
+            inflation_adjusted_balance = balance / ((1 + inflation_rate) ** year)
+
+        yearly_data.append({
+            'year': year,
+            'balance': round(balance, 2),
+            'inflation_adjusted_balance': round(inflation_adjusted_balance, 2),
+            'total_contributions': round(total_contributions, 2)
+        })
+
+    return yearly_data

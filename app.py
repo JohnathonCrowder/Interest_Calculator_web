@@ -1,7 +1,9 @@
 from flask import Flask, render_template, request, jsonify
 from calculations import calculate_growth, calculate_debt_payoff, calculate_monthly_payment
+from calculations import calculate_retirement_savings, calculate_required_savings
 import datetime
 
+from calculations import calculate_retirement_savings_with_inflation
 import io
 import base64
 import matplotlib
@@ -100,7 +102,12 @@ def calculate_debt():
     monthly_payment = float(request.form.get('monthly_payment', 0))
 
     years, extra_months, total_interest, payment_schedule, graph_data = calculate_debt_payoff(total_debt, interest_rate, monthly_payment)
-    plot_data = generate_debt_plot(graph_data) if graph_data else None
+    plot_data = {
+        'months': graph_data['months'],
+        'remaining_debt': graph_data['remaining_debt'],
+        'cumulative_interest': graph_data['cumulative_interest'],
+        'cumulative_principal': graph_data['cumulative_principal']
+    }
 
     return jsonify({
         'years': years,
@@ -108,6 +115,33 @@ def calculate_debt():
         'total_interest': total_interest,
         'payment_schedule': payment_schedule,
         'plot_data': plot_data
+    })
+
+@app.route('/retirement-calculator')
+def retirement_calculator():
+    return render_template('retirement_calculator.html')
+
+@app.route('/calculate-retirement', methods=['POST'])
+def calculate_retirement():
+    current_age = int(request.form.get('current_age'))
+    retirement_age = int(request.form.get('retirement_age'))
+    current_savings = float(request.form.get('current_savings'))
+    monthly_contribution = float(request.form.get('monthly_contribution'))
+    expected_return = float(request.form.get('expected_return')) / 100
+    inflation_rate = float(request.form.get('inflation_rate')) / 100
+
+    years_until_retirement = retirement_age - current_age
+
+    yearly_data = calculate_retirement_savings_with_inflation(
+        current_savings, monthly_contribution, expected_return, inflation_rate, years_until_retirement
+    )
+
+    return jsonify({
+        'projected_savings': round(yearly_data[-1]['balance'], 2),
+        'inflation_adjusted_savings': round(yearly_data[-1]['inflation_adjusted_balance'], 2),
+        'total_contributions': round(yearly_data[-1]['total_contributions'], 2),
+        'total_interest': round(yearly_data[-1]['balance'] - yearly_data[-1]['total_contributions'], 2),
+        'yearly_data': yearly_data
     })
 
 @app.route('/calculate-monthly-payment', methods=['POST'])
