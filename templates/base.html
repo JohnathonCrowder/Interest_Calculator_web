@@ -15,7 +15,7 @@
                     <a href="{{ url_for('index') }}" class="text-xl font-bold text-blue-500 hover:text-blue-400">
                         <i class="fas fa-chart-line mr-2"></i>FinanceViz
                     </a>
-                    <div class="ml-10 flex items-baseline space-x-4">
+                    <div class="hidden md:flex items-center space-x-4 ml-10">
                         <a href="{{ url_for('index') }}" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Growth Calculator</a>
                         <a href="{{ url_for('debt_calculator') }}" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Debt Calculator</a>
                         <a href="{{ url_for('retirement_calculator') }}" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Retirement Calculator</a>
@@ -23,11 +23,28 @@
                         <a href="#" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Resources</a>
                     </div>
                 </div>
-                <div>
+                <div class="hidden md:block">
                     <a href="#" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Sign In</a>
+                </div>
+                <!-- Mobile menu button -->
+                <div class="md:hidden flex items-center">
+                    <button class="mobile-menu-button">
+                        <svg class="w-6 h-6 fill-current text-white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                            <path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/>
+                        </svg>
+                    </button>
                 </div>
             </div>
         </nav>
+        <!-- Mobile menu -->
+        <div class="mobile-menu hidden md:hidden">
+            <a href="{{ url_for('index') }}" class="block text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-base font-medium">Growth Calculator</a>
+            <a href="{{ url_for('debt_calculator') }}" class="block text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-base font-medium">Debt Calculator</a>
+            <a href="{{ url_for('retirement_calculator') }}" class="block text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-base font-medium">Retirement Calculator</a>
+            <a href="#" class="block text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-base font-medium">Investment Tools</a>
+            <a href="#" class="block text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-base font-medium">Resources</a>
+            <a href="#" class="block text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-base font-medium">Sign In</a>
+        </div>
     </header>
 
     <!-- Main Content -->
@@ -42,6 +59,16 @@
 
     <!-- Font Awesome for icons -->
     <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+
+    <!-- Mobile menu toggle script -->
+    <script>
+        const btn = document.querySelector('button.mobile-menu-button');
+        const menu = document.querySelector('.mobile-menu');
+
+        btn.addEventListener('click', () => {
+            menu.classList.toggle('hidden');
+        });
+    </script>
 
     {% block scripts %}{% endblock %}
 </body>
